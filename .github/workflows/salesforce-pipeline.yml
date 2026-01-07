@@ -30,7 +30,7 @@ jobs:
 
       - name: Validate delta (check-only)
         run: |
-          sfdx force:source:deploy -x delta/package.xml -u qa -l RunSpecifiedTests -r "AccountTriggerTest,OpportunityServiceTest" -c -w 30
+          sfdx force:source:deploy -x delta/package.xml -u target -l RunSpecifiedTests -r "AccountTriggerTest,OpportunityServiceTest" -c -w 30
 
   deploy:
     if: github.event_name == 'push'
@@ -55,4 +55,4 @@ jobs:
 
       - name: Deploy delta
         run: |
-          sfdx force:source:deploy -x delta/package.xml -u qa -l RunSpecifiedTests -r "AccountTriggerTest,OpportunityServiceTest" -w 60
+          sfdx force:source:deploy -x delta/package.xml -u target -l RunSpecifiedTests -r "AccountTriggerTest,OpportunityServiceTest" -w 60

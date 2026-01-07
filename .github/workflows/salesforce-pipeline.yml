@@ -18,7 +18,7 @@ jobs:
       - name: Install Salesforce CLI + Delta plugin
         run: |
           npm install --global @salesforce/cli
-          SF_AUTO_ACCEPT_UNTRUSTED=true sfdx plugins:install sfdx-git-delta --force
+          echo y | sfdx plugins:install sfdx-git-delta
 
       - name: Select target environment
         id: env

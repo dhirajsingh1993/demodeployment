@@ -22,7 +22,7 @@ jobs:
       - name: Auth to QA Org
         run: |
           echo "${{ secrets.SFDX_AUTH_URL_QA }}" > auth.txt
-          sfdx auth:sfdxurl:store -f auth.txt -a qa
+          sfdx force:auth:sfdxurl:store -f auth.txt -a target
 
       - name: Generate delta package
         run: |
@@ -47,7 +47,7 @@ jobs:
       - name: Auth to QA Org
         run: |
           echo "${{ secrets.SFDX_AUTH_URL_QA }}" > auth.txt
-          sfdx auth:sfdxurl:store -f auth.txt -a qa
+          sfdx force:auth:sfdxurl:store -f auth.txt -a target
 
       - name: Generate delta package
         run: |

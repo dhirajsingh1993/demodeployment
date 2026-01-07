@@ -3,6 +3,9 @@ name: Auto Promotion PRs
 on:
   push:
     branches: [ qa, sit, uat ]
+  pull_request:
+    types: [closed]
+    branches: [ qa, sit, uat ]
 
 jobs:
   promote:
@@ -17,12 +20,20 @@ jobs:
           sudo apt-get install gh -y
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
+      - name: Debug Info
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Repo: ${{ github.repository }}"
+          gh repo view ${{ github.repository }} --json visibility,defaultBranchRef || echo "Repo view failed"
+          gh pr list --state open --limit 5 || echo "PR list failed"
+
       - name: Create Promotion PR
         run: |
           if [ "${{ github.ref_name }}" = "qa" ]; then
-            gh pr create --base sit --head qa --title "Promote QA → SIT" --body "Auto-generated PR from QA to SIT"
+            gh pr create --base sit --head qa --title "Promote QA → SIT" --body "Auto-generated PR from QA to SIT" || echo "PR creation failed: SIT branch missing or PR already exists"
           elif [ "${{ github.ref_name }}" = "sit" ]; then
-            gh pr create --base uat --head sit --title "Promote SIT → UAT" --body "Auto-generated PR from SIT to UAT"
+            gh pr create --base uat --head sit --title "Promote SIT → UAT" --body "Auto-generated PR from SIT to UAT" || echo "PR creation failed: UAT branch missing or PR already exists"
           elif [ "${{ github.ref_name }}" = "uat" ]; then
-            gh pr create --base prod --head uat --title "Promote UAT → PROD" --body "Auto-generated PR from UAT to PROD"
+            gh pr create --base prod --head uat --title "Promote UAT → PROD" --body "Auto-generated PR from UAT to PROD" || echo "PR creation failed: PROD branch missing or PR already exists"
           fi

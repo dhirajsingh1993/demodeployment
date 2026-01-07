@@ -43,8 +43,7 @@ jobs:
       - name: Auth org
         run: |
           echo "${{ steps.env.outputs.AUTH }}" > auth.txt
-          sf org login sfdx-url -f auth.txt --alias ${{ steps.env.outputs.ALIAS }} --set-default
-          sf org list
+          sfdx force:auth:sfdxurl:store -f auth.txt -a target
 
       - name: Generate delta package
         run: |
@@ -96,8 +95,7 @@ jobs:
       - name: Auth org
         run: |
           echo "${{ steps.env.outputs.AUTH }}" > auth.txt
-          sf org login sfdx-url -f auth.txt --alias ${{ steps.env.outputs.ALIAS }} --set-default
-          sf org list
+          sfdx force:auth:sfdxurl:store -f auth.txt -a target
 
       - name: Generate delta package
         run: |

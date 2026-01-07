@@ -67,7 +67,7 @@ jobs:
       - name: Install Salesforce CLI + Delta plugin
         run: |
           npm install --global @salesforce/cli
-          sf plugins install sfdx-git-delta
+          sf plugins install sfdx-git-delta --force
 
       - name: Select target environment
         id: env

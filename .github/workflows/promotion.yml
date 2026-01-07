@@ -1,0 +1,57 @@
+name: Auto Promotion PRs
+
+on:
+  push:
+    branches: [ qa, sit, uat ]
+  pull_request:
+    types: [closed]
+    branches: [ qa, sit, uat ]
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install gh -y
+          echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+
+      - name: Debug Info
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Repo: ${{ github.repository }}"
+          gh repo view ${{ github.repository }} --json visibility,defaultBranchRef || echo "Repo view failed"
+          gh pr list --state open --limit 5 || echo "PR list failed"
+
+      - name: Create Promotion Branch and PR
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          # Extract feature identifier from commit message (pattern: feature/<name>)
+          FEATURE_BRANCH=$(git log -1 --pretty=%s | sed -n 's/.*feature\/\([^ ]*\).*/\1/p')
+          [ -z "$FEATURE_BRANCH" ] && FEATURE_BRANCH="changes"
+
+          if [ "${{ github.ref_name }}" = "qa" ]; then
+            PROMO_BRANCH="promotion/${FEATURE_BRANCH}-qa-to-sit"
+            git checkout -b $PROMO_BRANCH
+            git push origin $PROMO_BRANCH --force
+            gh pr create --base sit --head $PROMO_BRANCH --title "Promote QA → SIT (${FEATURE_BRANCH})" --body "Auto-generated PR from QA to SIT for ${FEATURE_BRANCH}"
+          elif [ "${{ github.ref_name }}" = "sit" ]; then
+            PROMO_BRANCH="promotion/${FEATURE_BRANCH}-sit-to-uat"
+            git checkout -b $PROMO_BRANCH
+            git push origin $PROMO_BRANCH --force
+            gh pr create --base uat --head $PROMO_BRANCH --title "Promote SIT → UAT (${FEATURE_BRANCH})" --body "Auto-generated PR from SIT to UAT for ${FEATURE_BRANCH}"
+          elif [ "${{ github.ref_name }}" = "uat" ]; then
+            PROMO_BRANCH="promotion/${FEATURE_BRANCH}-uat-to-prod"
+            git checkout -b $PROMO_BRANCH
+            git push origin $PROMO_BRANCH --force
+            gh pr create --base prod --head $PROMO_BRANCH --title "Promote UAT → PROD (${FEATURE_BRANCH})" --body "Auto-generated PR from UAT to PROD for ${FEATURE_BRANCH}"
+          fi

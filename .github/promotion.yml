@@ -1,0 +1,28 @@
+name: Auto Promotion PRs
+
+on:
+  push:
+    branches: [ qa, sit, uat ]
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install gh -y
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Create Promotion PR
+        run: |
+          if [ "${{ github.ref_name }}" = "qa" ]; then
+            gh pr create --base sit --head qa --title "Promote QA → SIT" --body "Auto-generated PR from QA to SIT"
+          elif [ "${{ github.ref_name }}" = "sit" ]; then
+            gh pr create --base uat --head sit --title "Promote SIT → UAT" --body "Auto-generated PR from SIT to UAT"
+          elif [ "${{ github.ref_name }}" = "uat" ]; then
+            gh pr create --base prod --head uat --title "Promote UAT → PROD" --body "Auto-generated PR from UAT to PROD"
+          fi

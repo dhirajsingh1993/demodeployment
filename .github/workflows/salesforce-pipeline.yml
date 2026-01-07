@@ -52,7 +52,8 @@ jobs:
 
       - name: Generate delta package
         run: |
-          sfdx sgd:source:delta --to HEAD --from "${{ steps.env.outputs.FROM }}" --output delta
+          mkdir -p delta
+          sfdx sgd:source:delta --to HEAD --from ${{ github.event.pull_request.base.sha }} --output delta
 
       - name: Validate delta (check-only)
         run: |
@@ -103,7 +104,8 @@ jobs:
 
       - name: Generate delta package
         run: |
-          sfdx sgd:source:delta --to HEAD --from "${{ steps.env.outputs.FROM }}" --output delta
+          mkdir -p delta
+          sfdx sgd:source:delta --to HEAD --from ${{ github.event.pull_request.base.sha }} --output delta
 
       - name: Deploy delta
         run: |

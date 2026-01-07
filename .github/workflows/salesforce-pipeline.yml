@@ -1,4 +1,4 @@
-name: Salesforce Multi-Stage Deployment (Delta + Specified Tests)
+name: Salesforce Deployment
 
 on:
   pull_request:
@@ -19,39 +19,18 @@ jobs:
           npm install --global sfdx-cli
           sfdx plugins:install sfdx-git-delta
 
-      - name: Select target environment
-        id: env
+      - name: Auth to QA Org
         run: |
-          if [ "${{ github.base_ref }}" = "qa" ]; then
-            echo "AUTH=${{ secrets.SFDX_AUTH_URL_QA }}" >> $GITHUB_OUTPUT
-            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
-            echo "FROM=origin/master" >> $GITHUB_OUTPUT
-          elif [ "${{ github.base_ref }}" = "sit" ]; then
-            echo "AUTH=${{ secrets.SFDX_AUTH_URL_SIT }}" >> $GITHUB_OUTPUT
-            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
-            echo "FROM=origin/qa" >> $GITHUB_OUTPUT
-          elif [ "${{ github.base_ref }}" = "uat" ]; then
-            echo "AUTH=${{ secrets.SFDX_AUTH_URL_UAT }}" >> $GITHUB_OUTPUT
-            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
-            echo "FROM=origin/sit" >> $GITHUB_OUTPUT
-          else
-            echo "AUTH=${{ secrets.SFDX_AUTH_URL_PROD }}" >> $GITHUB_OUTPUT
-            echo "TESTS=CriticalSuiteTest1,CriticalSuiteTest2" >> $GITHUB_OUTPUT
-            echo "FROM=origin/uat" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Auth org
-        run: |
-          echo "${{ steps.env.outputs.AUTH }}" > auth.txt
-          sfdx auth:sfdxurl:store -f auth.txt -a target
+          echo "${{ secrets.SFDX_AUTH_URL_QA }}" > auth.txt
+          sfdx auth:sfdxurl:store -f auth.txt -a qa
 
       - name: Generate delta package
         run: |
-          sfdx sgd:source:delta --to "HEAD" --from "${{ steps.env.outputs.FROM }}" --output "delta"
+          sfdx sgd:source:delta --to HEAD --from origin/master --output delta
 
       - name: Validate delta (check-only)
         run: |
-          sfdx force:source:deploy -x delta/package.xml -u target -l RunSpecifiedTests -r "${{ steps.env.outputs.TESTS }}" -c -w 30
+          sfdx force:source:deploy -x delta/package.xml -u qa -l RunSpecifiedTests -r "AccountTriggerTest,OpportunityServiceTest" -c -w 30
 
   deploy:
     if: github.event_name == 'push'
@@ -65,36 +44,15 @@ jobs:
           npm install --global sfdx-cli
           sfdx plugins:install sfdx-git-delta
 
-      - name: Select target environment
-        id: env
+      - name: Auth to QA Org
         run: |
-          if [ "${{ github.ref_name }}" = "qa" ]; then
-            echo "AUTH=${{ secrets.SFDX_AUTH_URL_QA }}" >> $GITHUB_OUTPUT
-            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
-            echo "FROM=origin/master" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref_name }}" = "sit" ]; then
-            echo "AUTH=${{ secrets.SFDX_AUTH_URL_SIT }}" >> $GITHUB_OUTPUT
-            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
-            echo "FROM=origin/qa" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref_name }}" = "uat" ]; then
-            echo "AUTH=${{ secrets.SFDX_AUTH_URL_UAT }}" >> $GITHUB_OUTPUT
-            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
-            echo "FROM=origin/sit" >> $GITHUB_OUTPUT
-          else
-            echo "AUTH=${{ secrets.SFDX_AUTH_URL_PROD }}" >> $GITHUB_OUTPUT
-            echo "TESTS=CriticalSuiteTest1,CriticalSuiteTest2" >> $GITHUB_OUTPUT
-            echo "FROM=origin/uat" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Auth org
-        run: |
-          echo "${{ steps.env.outputs.AUTH }}" > auth.txt
-          sfdx auth:sfdxurl:store -f auth.txt -a target
+          echo "${{ secrets.SFDX_AUTH_URL_QA }}" > auth.txt
+          sfdx auth:sfdxurl:store -f auth.txt -a qa
 
       - name: Generate delta package
         run: |
-          sfdx sgd:source:delta --to "HEAD" --from "${{ steps.env.outputs.FROM }}" --output "delta"
+          sfdx sgd:source:delta --to HEAD --from origin/master --output delta
 
       - name: Deploy delta
         run: |
-          sfdx force:source:deploy -x delta/package.xml -u target -l RunSpecifiedTests -r "${{ steps.env.outputs.TESTS }}" -w 60
+          sfdx force:source:deploy -x delta/package.xml -u qa -l RunSpecifiedTests -r "AccountTriggerTest,OpportunityServiceTest" -w 60

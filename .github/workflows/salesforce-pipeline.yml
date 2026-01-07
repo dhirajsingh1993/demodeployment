@@ -43,7 +43,7 @@ jobs:
       - name: Auth org
         run: |
           echo "${{ steps.env.outputs.AUTH }}" > auth.txt
-          force:auth:sfdxurl:store -f auth.txt -a target
+          sfdx force:auth:sfdxurl:store -f auth.txt -a target
 
       - name: Generate delta package
         run: |
@@ -89,7 +89,7 @@ jobs:
       - name: Auth org
         run: |
           echo "${{ steps.env.outputs.AUTH }}" > auth.txt
-          force:auth:sfdxurl:store -f auth.txt -a target
+          sfdx force:auth:sfdxurl:store -f auth.txt -a target
 
       - name: Generate delta package
         run: |

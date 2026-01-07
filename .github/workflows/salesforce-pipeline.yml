@@ -1,0 +1,100 @@
+name: Salesforce Multi-Stage Deployment (Delta + Specified Tests)
+
+on:
+  pull_request:
+    branches: [ qa, sit, uat, prod ]
+  push:
+    branches: [ qa, sit, uat, prod ]
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI + Delta plugin
+        run: |
+          npm install --global sfdx-cli
+          sfdx plugins:install sfdx-git-delta
+
+      - name: Select target environment
+        id: env
+        run: |
+          if [ "${{ github.base_ref }}" = "qa" ]; then
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_QA }}" >> $GITHUB_OUTPUT
+            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
+            echo "FROM=origin/master" >> $GITHUB_OUTPUT
+          elif [ "${{ github.base_ref }}" = "sit" ]; then
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_SIT }}" >> $GITHUB_OUTPUT
+            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
+            echo "FROM=origin/qa" >> $GITHUB_OUTPUT
+          elif [ "${{ github.base_ref }}" = "uat" ]; then
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_UAT }}" >> $GITHUB_OUTPUT
+            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
+            echo "FROM=origin/sit" >> $GITHUB_OUTPUT
+          else
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_PROD }}" >> $GITHUB_OUTPUT
+            echo "TESTS=CriticalSuiteTest1,CriticalSuiteTest2" >> $GITHUB_OUTPUT
+            echo "FROM=origin/uat" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Auth org
+        run: |
+          echo "${{ steps.env.outputs.AUTH }}" > auth.txt
+          sfdx auth:sfdxurl:store -f auth.txt -a target
+
+      - name: Generate delta package
+        run: |
+          sfdx sgd:source:delta --to "HEAD" --from "${{ steps.env.outputs.FROM }}" --output "delta"
+
+      - name: Validate delta (check-only)
+        run: |
+          sfdx force:source:deploy -x delta/package.xml -u target -l RunSpecifiedTests -r "${{ steps.env.outputs.TESTS }}" -c -w 30
+
+  deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI + Delta plugin
+        run: |
+          npm install --global sfdx-cli
+          sfdx plugins:install sfdx-git-delta
+
+      - name: Select target environment
+        id: env
+        run: |
+          if [ "${{ github.ref_name }}" = "qa" ]; then
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_QA }}" >> $GITHUB_OUTPUT
+            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
+            echo "FROM=origin/master" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" = "sit" ]; then
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_SIT }}" >> $GITHUB_OUTPUT
+            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
+            echo "FROM=origin/qa" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" = "uat" ]; then
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_UAT }}" >> $GITHUB_OUTPUT
+            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
+            echo "FROM=origin/sit" >> $GITHUB_OUTPUT
+          else
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_PROD }}" >> $GITHUB_OUTPUT
+            echo "TESTS=CriticalSuiteTest1,CriticalSuiteTest2" >> $GITHUB_OUTPUT
+            echo "FROM=origin/uat" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Auth org
+        run: |
+          echo "${{ steps.env.outputs.AUTH }}" > auth.txt
+          sfdx auth:sfdxurl:store -f auth.txt -a target
+
+      - name: Generate delta package
+        run: |
+          sfdx sgd:source:delta --to "HEAD" --from "${{ steps.env.outputs.FROM }}" --output "delta"
+
+      - name: Deploy delta
+        run: |
+          sfdx force:source:deploy -x delta/package.xml -u target -l RunSpecifiedTests -r "${{ steps.env.outputs.TESTS }}" -w 60

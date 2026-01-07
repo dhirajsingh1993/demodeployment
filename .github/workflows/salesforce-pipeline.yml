@@ -58,7 +58,11 @@ jobs:
 
       - name: Validate delta (check-only)
         run: |
-          sf project deploy start -x delta/package.xml -u ${{ steps.env.outputs.ALIAS }} -l RunSpecifiedTests -r "${{ steps.env.outputs.TESTS }}" -c -w 30
+          if [ -f delta/package.xml ]; then
+            sf project deploy start -x delta/package.xml -u ${{ steps.env.outputs.ALIAS }} -l RunSpecifiedTests -r "${{ steps.env.outputs.TESTS }}" -c -w 30
+          else
+            echo "No delta changes detected, skipping validation."
+          fi
 
   deploy:
     if: github.event_name == 'push'
@@ -111,4 +115,8 @@ jobs:
 
       - name: Deploy delta
         run: |
-          sf project deploy start -x delta/package.xml -u ${{ steps.env.outputs.ALIAS }} -l RunSpecifiedTests -r "${{ steps.env.outputs.TESTS }}" -w 60
+          if [ -f delta/package.xml ]; then
+            sf project deploy start -x delta/package.xml -u ${{ steps.env.outputs.ALIAS }} -l RunSpecifiedTests -r "${{ steps.env.outputs.TESTS }}" -w 60
+          else
+            echo "No delta changes detected, skipping deployment."
+          fi

@@ -16,8 +16,9 @@ jobs:
 
       - name: Install Salesforce CLI + Delta plugin
         run: |
-          npm install --global sfdx-cli
-          sfdx plugins:install sfdx-git-delta
+            npm install --global sfdx-cli
+            sfdx plugins:install sfdx-git-delta
+
 
       - name: Auth to QA Org
         run: |

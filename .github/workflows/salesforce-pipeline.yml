@@ -15,13 +15,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Salesforce CLI (sf + sfdx) + Delta plugin
+      - name: Install Salesforce CLI + Delta plugin
         run: |
           npm install --global @salesforce/cli
-          npm install --global sfdx-cli
-          mkdir -p ~/.config/sfdx
-          echo '["sfdx-git-delta"]' > ~/.config/sfdx/unsignedPluginAllowList.json
-          sfdx plugins:install sfdx-git-delta
+          echo y | sfdx plugins:install sfdx-git-delta
 
       - name: Select target environment
         id: env
@@ -69,13 +66,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Salesforce CLI (sf + sfdx) + Delta plugin
+      - name: Install Salesforce CLI + Delta plugin
         run: |
           npm install --global @salesforce/cli
-          npm install --global sfdx-cli
-          mkdir -p ~/.config/sfdx
-          echo '["sfdx-git-delta"]' > ~/.config/sfdx/unsignedPluginAllowList.json
-          sfdx plugins:install sfdx-git-delta
+          SF_AUTO_ACCEPT_UNTRUSTED=true sfdx plugins:install sfdx-git-delta --force
 
       - name: Select target environment
         id: env

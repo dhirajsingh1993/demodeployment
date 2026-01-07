@@ -13,38 +13,102 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Salesforce CLI + Delta plugin
         run: |
           npm install --global @salesforce/cli
-          SF_AUTO_ACCEPT_UNTRUSTED=true sfdx plugins:install sfdx-git-delta --force
+          echo y | sfdx plugins:install sfdx-git-delta
 
       - name: Select target environment
         id: env
         run: |
           if [ "${{ github.base_ref }}" = "qa" ]; then
             echo "AUTH=${{ secrets.SFDX_AUTH_URL_QA }}" >> $GITHUB_OUTPUT
-            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
-            echo "FROM=origin/master" >> $GITHUB_OUTPUT
             echo "ALIAS=qa" >> $GITHUB_OUTPUT
           elif [ "${{ github.base_ref }}" = "sit" ]; then
             echo "AUTH=${{ secrets.SFDX_AUTH_URL_SIT }}" >> $GITHUB_OUTPUT
-            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
-            echo "FROM=origin/qa" >> $GITHUB_OUTPUT
             echo "ALIAS=sit" >> $GITHUB_OUTPUT
           elif [ "${{ github.base_ref }}" = "uat" ]; then
             echo "AUTH=${{ secrets.SFDX_AUTH_URL_UAT }}" >> $GITHUB_OUTPUT
-            echo "TESTS=AccountTriggerTest,OpportunityServiceTest" >> $GITHUB_OUTPUT
-            echo "FROM=origin/sit" >> $GITHUB_OUTPUT
             echo "ALIAS=uat" >> $GITHUB_OUTPUT
           else
             echo "AUTH=${{ secrets.SFDX_AUTH_URL_PROD }}" >> $GITHUB_OUTPUT
-            echo "TESTS=CriticalSuiteTest1,CriticalSuiteTest2" >> $GITHUB_OUTPUT
-            echo "FROM=origin/uat" >> $GITHUB_OUTPUT
             echo "ALIAS=prod" >> $GITHUB_OUTPUT
           fi
+          echo "FROM=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
+          echo "TESTS=AccountDomainTest" >> $GITHUB_OUTPUT
 
       - name: Auth org
         run: |
           echo "${{ steps.env.outputs.AUTH }}" > auth.txt
-          sf org login sfdx-url -f auth.txt -a ${{ steps.env.outputs.ALIAS }}
+          sf org login sfdx-url -f auth.txt --alias ${{ steps.env.outputs.ALIAS }} --set-default
+          sf org list
+
+      - name: Generate delta package
+        run: |
+          mkdir -p delta
+          sfdx sgd:source:delta --to HEAD --from "${{ steps.env.outputs.FROM }}" --output-dir delta --generate-delta
+          ls -R delta
+
+      - name: Validate delta (check-only)
+        run: |
+          if [ -f delta/package/package.xml ]; then
+            sf project deploy start -x delta/package/package.xml -o ${{ steps.env.outputs.ALIAS }} --test-level RunSpecifiedTests --tests "${{ steps.env.outputs.TESTS }}" --dry-run --wait 30
+          else
+            echo "No delta changes detected, skipping validation."
+          fi
+
+  deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Salesforce CLI + Delta plugin
+        run: |
+          npm install --global @salesforce/cli
+          echo y | sfdx plugins:install sfdx-git-delta
+
+      - name: Select target environment
+        id: env
+        run: |
+          if [ "${{ github.ref_name }}" = "qa" ]; then
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_QA }}" >> $GITHUB_OUTPUT
+            echo "ALIAS=qa" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" = "sit" ]; then
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_SIT }}" >> $GITHUB_OUTPUT
+            echo "ALIAS=sit" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" = "uat" ]; then
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_UAT }}" >> $GITHUB_OUTPUT
+            echo "ALIAS=uat" >> $GITHUB_OUTPUT
+          else
+            echo "AUTH=${{ secrets.SFDX_AUTH_URL_PROD }}" >> $GITHUB_OUTPUT
+            echo "ALIAS=prod" >> $GITHUB_OUTPUT
+          fi
+          echo "FROM=${{ github.event.before }}" >> $GITHUB_OUTPUT
+          echo "TESTS=AccountDomainTest" >> $GITHUB_OUTPUT
+
+      - name: Auth org
+        run: |
+          echo "${{ steps.env.outputs.AUTH }}" > auth.txt
+          sf org login sfdx-url -f auth.txt --alias ${{ steps.env.outputs.ALIAS }} --set-default
+          sf org list
+
+      - name: Generate delta package
+        run: |
+          mkdir -p delta
+          sfdx sgd:source:delta --to HEAD --from "${{ steps.env.outputs.FROM }}" --output-dir delta --generate-delta
+          ls -R delta
+
+      - name: Deploy delta
+        run: |
+          if [ -f delta/package/package.xml ]; then
+            sf project deploy start -x delta/package/package.xml -o ${{ steps.env.outputs.ALIAS }} --test-level RunSpecifiedTests --tests "${{ steps.env.outputs.TESTS }}" --wait 60
+          else
+            echo "No delta changes detected, skipping deployment."
+          fi

@@ -17,7 +17,7 @@ jobs:
       - name: Install Salesforce CLI + Delta plugin
         run: |
           npm install --global @salesforce/cli
-          SF_AUTO_ACCEPT_UNTRUSTED=true sf plugins install sfdx-git-delta --force
+          SF_AUTO_ACCEPT_UNTRUSTED=true sfdx plugins:install sfdx-git-delta --force
 
       - name: Select target environment
         id: env
@@ -51,7 +51,7 @@ jobs:
 
       - name: Generate delta package
         run: |
-          sf sgd:source:delta --to HEAD --from "${{ steps.env.outputs.FROM }}" --output delta
+          sfdx sgd:source:delta --to HEAD --from "${{ steps.env.outputs.FROM }}" --output delta
 
       - name: Validate delta (check-only)
         run: |
@@ -67,7 +67,7 @@ jobs:
       - name: Install Salesforce CLI + Delta plugin
         run: |
           npm install --global @salesforce/cli
-          SF_AUTO_ACCEPT_UNTRUSTED=true sf plugins install sfdx-git-delta --force
+          SF_AUTO_ACCEPT_UNTRUSTED=true sfdx plugins:install sfdx-git-delta --force
 
       - name: Select target environment
         id: env
@@ -101,7 +101,7 @@ jobs:
 
       - name: Generate delta package
         run: |
-          sf sgd:source:delta --to HEAD --from "${{ steps.env.outputs.FROM }}" --output delta
+          sfdx sgd:source:delta --to HEAD --from "${{ steps.env.outputs.FROM }}" --output delta
 
       - name: Deploy delta
         run: |

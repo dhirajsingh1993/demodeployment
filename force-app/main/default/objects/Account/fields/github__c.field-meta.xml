@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>github__c</fullName>
     <defaultValue>false</defaultValue>
-    <label>github</label>
+    <label>githubdemo</label>
     <trackFeedHistory>false</trackFeedHistory>
     <type>Checkbox</type>
 </CustomField>

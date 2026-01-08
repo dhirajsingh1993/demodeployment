@@ -1,6 +1,6 @@
 public with sharing class AccountDomain {
     
-    // Method to update Account description
+    //   Method to update Account description
     public static void updateAccountDescription(Id accountId, String newDescription) {
         if (accountId == null || String.isBlank(newDescription)) {
             throw new AuraHandledException('Invalid input provided');
